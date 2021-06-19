@@ -1,8 +1,5 @@
-django-apache-nginx-uwsgi-vps-ubuntu
+#django-apache-nginx-uwsgi-vps-ubuntu
 Nesse tutorial faremos o deploy de nossa aplicação em uma VPN ubuntu.
-
-[*Atenção o Daphne é um Interface de Gateway do Servidor(SGI) por tanto ele não serve arquivos staticos
-eu recomendo que você utilize metodo de armazenamento de arquivos estaticos profssionais como CDN exemplo: S3 fica a dica *]
 
 Preparando Ambientes
 sudo apt-get install python3-venv
