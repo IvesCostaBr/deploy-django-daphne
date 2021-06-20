@@ -1,41 +1,64 @@
-#django-apache-nginx-uwsgi-vps-ubuntu
-Nesse tutorial faremos o deploy de nossa aplicação em uma VPN ubuntu.
+# django-apache-nginx-uwsgi-vps-ubuntu
+Tutorial on how to deploy a Django application on Linux VPS with Apache, NGINX and uWSGI
 
-Preparando Ambientes
+## Preparing the environmnet
+```
 sudo apt-get install python3-venv
-Crie um virtual env
-python3 -m venv venv
+```
+* Create virtual env
 
-Faça a clonagem do seu repositório em sua VPS
-git clone your-url.git
+```python3 -m venv venv```
 
-Instale as dependências pip install -r requirements.txt
+* Clone repository
 
-Execute o comando collectstatic python manage.py collectstatic
+```git clone your-url.git```
 
-Execute o migrate para criar a base de dados python manage.py migrate
+* Install requirementst
+``` pip install -r requirements.txt```
 
-Create a superuser python manage.py createsuperuser
+* Run the collectstatic command 
+``` python manage.py collectstatic ```
 
-Setup static and media files
-Make sure your settings.py has the following configurations:
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
+* Create the database 
+``` python manage.py migrate ```
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-Run Django collectstatic python manage.py collectstatic
-Install and setup
-Install uwsgi on your virtual environment
-sudo apt-get install python3.6-dev
-sudo apt-get install build-essential libssl-dev libffi-dev python-dev
-pip install wheel
-pip install uwsgi
-Install and start Nginx
+* Create a superuser 
+``` python manage.py createsuperuser ```
+
+ ## Setup static and media files
+ 
+ * Make sure your settings.py has the following configurations:
+ ```
+ STATIC_URL = '/static/'
+ STATIC_ROOT = os.path.join(BASE_DIR, "static")
+ 
+ MEDIA_URL = '/media/'
+ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+ ```
+ 
+ * Run Django collectstatic
+ ```python manage.py collectstatic```
+
+ 
+ ## Install and setup 
+ * Install uwsgi on your virtual environment
+ 
+ ```
+ sudo apt-get install python3.6-dev
+ sudo apt-get install build-essential libssl-dev libffi-dev python-dev
+ pip install wheel
+ pip install uwsgi
+```
+* Install and start Nginx
+
+```
 sudo apt-get install nginx
 sudo /etc/init.d/nginx start
-Configure Nginx
-Create the file uwsgi_params on your project path
+```
+## Configure Nginx
+
+* Create the file uwsgi_params on your project path
+```
 vim uwsgi_params
 
 ---- file content -----
@@ -56,7 +79,10 @@ uwsgi_param  REMOTE_ADDR        $remote_addr;
 uwsgi_param  REMOTE_PORT        $remote_port;
 uwsgi_param  SERVER_PORT        $server_port;
 uwsgi_param  SERVER_NAME        $server_name;
-Create NGINX config file at /etc/nginx/sites/available
+```
+
+* Create NGINX config file at /etc/nginx/sites/available
+```
 upstream django {
     server unix:///home/ubuntu/django-apache-nginx-uwsgi-vps-ubuntu/mysite.sock; 
 }
@@ -81,16 +107,22 @@ server {
         include     /home/ubuntu/django-apache-nginx-uwsgi-vps-ubuntu/uwsgi_params; 
     }
 }
-Create a symlink on sites-enabled sudo ln -s ~/path/to/your/mysite/mysite_nginx.conf /etc/nginx/sites-enabled/
+```
 
-Restart Nginx sudo /etc/init.d/nginx restart
+* Create a symlink on sites-enabled
+sudo ln -s ~/path/to/your/mysite/mysite_nginx.conf /etc/nginx/sites-enabled/
 
-Download an image to media folder and test
+* Restart Nginx
+```sudo /etc/init.d/nginx restart```
 
-Run and test using Unix sockets uwsgi --socket mysite.sock --module mysite.wsgi --chmod-socket=666
+* Download an image to media folder and test
 
-Create the ini file
+* Run and test using Unix sockets
+```uwsgi --socket mysite.sock --module mysite.wsgi --chmod-socket=666```
 
+* Create the ini file
+
+```
 [uwsgi]
 chdir           = /home/ubuntu/django-apache-nginx-uwsgi-vps-ubuntu
 module          = django_vps.wsgi
@@ -100,13 +132,22 @@ processes       = 10
 socket          = /home/ubuntu/django-apache-nginx-uwsgi-vps-ubuntu/mysite.sock
 vacuum          = true
 chmod-socket    = 666
-Testing with .ini file uwsgi --ini mysite_uwsgi.ini
-Configuring the uWSGI as Emperor mode
+```
+
+* Testing with .ini file
+```uwsgi --ini mysite_uwsgi.ini```
+
+
+## Configuring the uWSGI as Emperor mode
+```
 sudo mkdir /etc/uwsgi
 sudo mkdir /etc/uwsgi/vassals
 sudo ln -s /home/ubuntu/django-apache-nginx-uwsgi-vps-ubuntu/mysite_uwsgi.ini /etc/uwsgi/vassals/
 uwsgi --emperor /etc/uwsgi/vassals --uid www-data --gid www-data
-Setup systemctl to start on boot
+```
+## Setup systemctl to start on boot
+
+```
 https://uwsgi-docs.readthedocs.io/en/latest/Systemd.html
 
 cd /etc/systemd/system/
@@ -145,31 +186,52 @@ sudo systemctl enable djangovps.service
 
 journalctl -u djangovps.service
 
-Setup Apache2 with Nginx as a reverse Proxy
-disable nginx default symlink to open port 80
+```
+
+## Setup Apache2 with Nginx as a reverse Proxy
+
+* disable nginx default symlink to open port 80
+``` 
  cd /etc/nginx/sites-enabled/
  sudo rm -rf default
  sudo /etc/init.d/nginx restart
+```
+
+```
 sudo apt-get install apache2
 sudo a2enmod proxy
 sudo a2enmod proxy_http
 sudo a2enmod proxy_balancer
 sudo a2enmod lbmethod_byrequests
-sudo systemctl restart apache2
+```
 
-Creating the Vhost
+```sudo systemctl restart apache2```
+
+* Creating the Vhost
+
+``` 
 cd /etc/apache2/sites-available
 sudo vim django_vps.conf
+```
+
+```
 <VirtualHost *:80>
     ServerName 52.16.70.162
     ProxyPass / http://127.0.0.1:8000/
     ProxyPassReverse / http://127.0.0.1:8000/
 </VirtualHost>
-Enable symlink on site-enable
+```
+
+* Enable symlink on site-enable
+```
 sudo ln -s /etc/apache2/sites-available/django_vps.conf /etc/apach
 e2/sites-enabled/
-Edit default vhost to your extra website
-Setup Django to user Postgres DB
+```
+
+* Edit default vhost to your extra website
+
+## Setup Django to user Postgres DB
+```
 sudo apt-get install python-pip python-dev libpq-dev postgresql postgresql-contrib
 adduser <username>
 sudo su - postgres
@@ -184,7 +246,9 @@ ALTER USER <username> WITH PASSWORD '<new password>';
 add psycopg2 on requirements.txt
 push + pull
 install requirements.txt
-Consultando o banco de dados
+```
+### Consultando o banco de dados
+```
 sudo su
 su postgres
 psql
@@ -194,3 +258,4 @@ psql
 select * from auth_user;
 \q
 exit
+```
